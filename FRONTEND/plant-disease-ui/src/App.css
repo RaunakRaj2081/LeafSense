@@ -1,0 +1,171 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: "Segoe UI", sans-serif;
+  background: linear-gradient(135deg, #e3fdf5, #ffe6fa);
+}
+
+.container {
+  max-width: 420px;
+  margin: 40px auto;
+  background: white;
+  padding: 25px;
+  border-radius: 18px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+  text-align: center;
+}
+
+h1 {
+  font-size: 1.5rem;
+  margin-bottom: 20px;
+}
+
+.dropzone {
+  border: 2px dashed #bbb;
+  border-radius: 14px;
+  padding: 20px;
+  transition: 0.3s;
+  background: #fafafa;
+}
+
+.dragging {
+  border-color: #2ecc71;
+  background: #eafff3;
+}
+
+.dropzone p {
+  margin: 0;
+  font-weight: 500;
+}
+
+.dropzone span {
+  display: block;
+  margin: 8px 0;
+  color: #777;
+}
+
+.dropzone input {
+  cursor: pointer;
+}
+
+.preview img {
+  width: 100%;
+  max-height: 260px;
+  object-fit: contain;
+  margin-top: 15px;
+  border-radius: 14px;
+}
+
+button {
+  width: 100%;
+  margin-top: 20px;
+  padding: 14px;
+  font-size: 1rem;
+  font-weight: 600;
+  border: none;
+  border-radius: 14px;
+  background: #2ecc71;
+  color: white;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+button:hover {
+  background: #27ae60;
+}
+
+button:disabled {
+  background: #a5d6a7;
+}
+
+.spinner {
+  margin: 25px auto;
+  width: 45px;
+  height: 45px;
+  border: 5px solid #eee;
+  border-top: 5px solid #2ecc71;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.result {
+  margin-top: 25px;
+  padding: 15px;
+  background: #f9f9f9;
+  border-radius: 14px;
+}
+
+.bar {
+  width: 100%;
+  height: 12px;
+  background: #ddd;
+  border-radius: 8px;
+  overflow: hidden;
+  margin: 10px 0;
+}
+
+.fill {
+  height: 100%;
+  width: 0;
+  transition: width 0.6s ease-in-out;
+}
+
+.confidence-text {
+  font-size: 0.95rem;
+  font-weight: 500;
+}
+
+.button-group {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.clear-btn {
+  flex: 1;
+  padding: 14px;
+  border: 2px solid #e74c3c;
+  background: white;
+  color: #e74c3c;
+  border-radius: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+.clear-btn:hover {
+  background: #e74c3c;
+  color: white;
+}
+
+.camera {
+  margin-top: 15px;
+}
+
+.camera video {
+  width: 100%;
+  border-radius: 14px;
+}
+
+.camera button {
+  margin-top: 10px;
+  width: 100%;
+}
+
+.camera-btn {
+  margin-top: 10px;
+  background: #3498db;
+}
+
+.camera-btn:hover {
+  background: #2980b9;
+}
