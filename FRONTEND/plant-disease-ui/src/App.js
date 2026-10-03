@@ -1,9 +1,17 @@
-import { useState, useRef } from "react";
+import React, {
+  useEffect,
+  useRef,
+  useState
+} from "react";
+
 import "./App.css";
 
-const API_URL = "http://10.14.21.188:8000"; // 👈 IMPORTANT
+
+const API_URL = "http://localhost:8000";
+
 
 function App() {
+
   const [file, setFile] = useState(null);
   const [preview, setPreview] = useState(null);
   const [result, setResult] = useState(null);
@@ -13,191 +21,562 @@ function App() {
 
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
+  const streamRef = useRef(null);
 
-  const handleFile = (file) => {
-    if (!file) return;
-    setFile(file);
-    setResult(null);
-    setPreview(URL.createObjectURL(file));
-  };
 
-  // 📸 START CAMERA
-  const startCamera = async () => {
-    setResult(null);
+  // ==================================================
+  // HANDLE FILE
+  // ==================================================
 
-    if (!navigator.mediaDevices?.getUserMedia) {
-      alert("Camera not supported. Use HTTPS or localhost.");
+  const handleFile = (selectedFile) => {
+
+    if (!selectedFile) {
       return;
     }
 
+    setFile(selectedFile);
+    setResult(null);
+
+    setPreview((oldPreview) => {
+
+      if (oldPreview) {
+        URL.revokeObjectURL(oldPreview);
+      }
+
+      return URL.createObjectURL(selectedFile);
+    });
+  };
+
+
+  // ==================================================
+  // START CAMERA
+  // ==================================================
+
+  const startCamera = async () => {
+
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "environment" },
-      });
-      videoRef.current.srcObject = stream;
+
+      const stream =
+        await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: {
+              ideal: "environment"
+            }
+          },
+          audio: false
+        });
+
+      streamRef.current = stream;
+
       setCameraOn(true);
-    } catch {
-      alert("Camera permission denied");
+
+    } catch (error) {
+
+      console.error(
+        "Camera error:",
+        error
+      );
+
+      alert(
+        "Unable to access camera. Please allow camera permission."
+      );
     }
   };
 
-  // 📸 CAPTURE PHOTO
+
+  // ==================================================
+  // CONNECT VIDEO STREAM
+  // ==================================================
+
+  useEffect(() => {
+
+    if (
+      cameraOn &&
+      videoRef.current &&
+      streamRef.current
+    ) {
+
+      videoRef.current.srcObject =
+        streamRef.current;
+    }
+
+  }, [cameraOn]);
+
+
+  // ==================================================
+  // STOP CAMERA
+  // ==================================================
+
+  const stopCamera = () => {
+
+    if (streamRef.current) {
+
+      streamRef.current
+        .getTracks()
+        .forEach((track) => {
+          track.stop();
+        });
+
+      streamRef.current = null;
+    }
+
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
+
+    setCameraOn(false);
+  };
+
+
+  // ==================================================
+  // CAPTURE PHOTO
+  // ==================================================
+
   const capturePhoto = () => {
+
+    if (
+      !videoRef.current ||
+      !canvasRef.current
+    ) {
+      return;
+    }
+
     const video = videoRef.current;
     const canvas = canvasRef.current;
 
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
 
-    const ctx = canvas.getContext("2d");
-    ctx.drawImage(video, 0, 0);
+    const context =
+      canvas.getContext("2d");
 
-    canvas.toBlob((blob) => {
-      const imageFile = new File([blob], "camera.jpg", {
-        type: "image/jpeg",
-      });
-      handleFile(imageFile);
-      stopCamera();
-    });
+    context.drawImage(
+      video,
+      0,
+      0,
+      canvas.width,
+      canvas.height
+    );
+
+    canvas.toBlob(
+      (blob) => {
+
+        if (!blob) {
+          return;
+        }
+
+        const capturedFile =
+          new File(
+            [blob],
+            "camera.jpg",
+            {
+              type: "image/jpeg"
+            }
+          );
+
+        handleFile(capturedFile);
+
+        stopCamera();
+      },
+      "image/jpeg",
+      0.95
+    );
   };
 
-  // 🛑 STOP CAMERA
-  const stopCamera = () => {
-    const stream = videoRef.current?.srcObject;
-    stream?.getTracks().forEach((t) => t.stop());
-    setCameraOn(false);
-  };
 
-  // 🧹 CLEAR
+  // ==================================================
+  // CLEAR
+  // ==================================================
+
   const handleClear = () => {
+
     stopCamera();
+
     setFile(null);
     setPreview(null);
     setResult(null);
     setLoading(false);
   };
 
-  // 📤 DRAG & DROP
-  const handleDrop = (e) => {
-    e.preventDefault();
-    setDragging(false);
-    handleFile(e.dataTransfer.files[0]);
-  };
 
-  // 🔮 PREDICT
+  // ==================================================
+  // PREDICT
+  // ==================================================
+
   const handlePredict = async () => {
-    if (!file) return alert("Please upload or capture an image");
 
-    const formData = new FormData();
-    formData.append("file", file);
+    if (!file) {
+      alert("Please select or capture a leaf image first.");
+      return;
+    }
 
     setLoading(true);
     setResult(null);
 
     try {
-      const res = await fetch(`${API_URL}/predict`, {
-        method: "POST",
-        body: formData,
-      });
 
-      if (!res.ok) throw new Error("Server error");
+      const formData = new FormData();
 
-      const data = await res.json();
+      formData.append(
+        "file",
+        file
+      );
+
+      const response =
+        await fetch(
+          `${API_URL}/predict`,
+          {
+            method: "POST",
+            body: formData
+          }
+        );
+
+
+      if (!response.ok) {
+
+        throw new Error(
+          `Server returned ${response.status}`
+        );
+      }
+
+
+      const data =
+        await response.json();
+
       setResult(data);
-    } catch (err) {
-      console.error(err);
-      alert("Backend not reachable");
+
+    } catch (error) {
+
+      console.error(
+        "Prediction error:",
+        error
+      );
+
+      alert(
+        "Backend not reachable. Please make sure the FastAPI server is running."
+      );
+
     } finally {
+
       setLoading(false);
     }
   };
 
-  const getBarColor = (c) => {
-    if (c > 0.75) return "#2ecc71";
-    if (c > 0.5) return "#f39c12";
-    return "#e74c3c";
+
+  // ==================================================
+  // DRAG & DROP
+  // ==================================================
+
+  const handleDragOver = (event) => {
+
+    event.preventDefault();
+
+    setDragging(true);
   };
 
+
+  const handleDragLeave = () => {
+
+    setDragging(false);
+  };
+
+
+  const handleDrop = (event) => {
+
+    event.preventDefault();
+
+    setDragging(false);
+
+    const droppedFile =
+      event.dataTransfer.files[0];
+
+    if (droppedFile) {
+      handleFile(droppedFile);
+    }
+  };
+
+
+  // ==================================================
+  // CLEANUP
+  // ==================================================
+
+  useEffect(() => {
+
+    return () => {
+
+      if (streamRef.current) {
+
+        streamRef.current
+          .getTracks()
+          .forEach((track) => {
+            track.stop();
+          });
+      }
+
+      if (preview) {
+        URL.revokeObjectURL(preview);
+      }
+    };
+
+  }, [preview]);
+
+
+  // ==================================================
+  // UI
+  // ==================================================
+
   return (
-    <div className="container">
-      <h1>🌿 Plant Disease Detection</h1>
+    <div className="app">
 
-      {/* CAMERA */}
-      {cameraOn && (
-        <div className="camera">
-          <video ref={videoRef} autoPlay playsInline />
-          <button onClick={capturePhoto}>📸 Capture</button>
-        </div>
-      )}
+      <div className="container">
 
-      {/* UPLOAD */}
-      {!preview && !cameraOn && (
-        <div
-          className={`dropzone ${dragging ? "dragging" : ""}`}
-          onDragOver={(e) => {
-            e.preventDefault();
-            setDragging(true);
+        <h1>
+          Plant Disease Detection
+        </h1>
+
+        <p className="subtitle">
+          Upload or capture a potato leaf image
+          to detect its condition.
+        </p>
+
+
+        {/* ==========================================
+            UPLOAD AREA
+        ========================================== */}
+
+        {!cameraOn && (
+
+          <div
+            className={`dropzone ${
+              dragging ? "dragging" : ""
+            }`}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+          >
+
+            <input
+              type="file"
+              accept="image/*"
+              id="fileInput"
+              onChange={(event) => {
+
+                const selectedFile =
+                  event.target.files[0];
+
+                if (selectedFile) {
+                  handleFile(selectedFile);
+                }
+
+              }}
+            />
+
+            <label htmlFor="fileInput">
+
+              <div className="upload-icon">
+                📷
+              </div>
+
+              <p>
+                Drag & drop an image here
+              </p>
+
+              <span>
+                or click to browse
+              </span>
+
+            </label>
+
+          </div>
+        )}
+
+
+        {/* ==========================================
+            CAMERA
+        ========================================== */}
+
+        {cameraOn && (
+
+          <div className="camera-container">
+
+            <video
+              ref={videoRef}
+              autoPlay
+              playsInline
+              className="camera-video"
+            />
+
+            <button
+              onClick={capturePhoto}
+              className="primary-button"
+            >
+              Capture Photo
+            </button>
+
+            <button
+              onClick={stopCamera}
+              className="secondary-button"
+            >
+              Stop Camera
+            </button>
+
+          </div>
+        )}
+
+
+        <canvas
+          ref={canvasRef}
+          style={{
+            display: "none"
           }}
-          onDragLeave={() => setDragging(false)}
-          onDrop={handleDrop}
-        >
-          <p>Drag & drop image here</p>
-          <span>or</span>
-          <input
-            type="file"
-            accept="image/*"
-            onChange={(e) => handleFile(e.target.files[0])}
-          />
-          <button className="camera-btn" onClick={startCamera}>
-            📱 Use Camera
-          </button>
-        </div>
-      )}
+        />
 
-      {/* PREVIEW */}
-      {preview && (
-        <div className="preview">
-          <img src={preview} alt="preview" />
-        </div>
-      )}
 
-      {/* BUTTONS */}
-      <div className="button-group">
-        {file && (
-          <button className="clear-btn" onClick={handleClear}>
-            Clear
+        {/* ==========================================
+            CAMERA BUTTON
+        ========================================== */}
+
+        {!cameraOn && (
+
+          <button
+            onClick={startCamera}
+            className="camera-button"
+          >
+            Use Camera
           </button>
         )}
-        <button onClick={handlePredict} disabled={loading || !file}>
-          {loading ? "Analyzing..." : "Predict"}
-        </button>
+
+
+        {/* ==========================================
+            IMAGE PREVIEW
+        ========================================== */}
+
+        {preview && (
+
+          <div className="preview-section">
+
+            <h2>
+              Preview
+            </h2>
+
+            <img
+              src={preview}
+              alt="Leaf preview"
+              className="preview-image"
+            />
+
+          </div>
+        )}
+
+
+        {/* ==========================================
+            ACTION BUTTONS
+        ========================================== */}
+
+        {file && (
+
+          <div className="actions">
+
+            <button
+              onClick={handlePredict}
+              disabled={loading}
+              className="predict-button"
+            >
+
+              {loading
+                ? "Predicting..."
+                : "Predict Disease"}
+
+            </button>
+
+
+            <button
+              onClick={handleClear}
+              className="clear-button"
+              disabled={loading}
+            >
+              Clear
+            </button>
+
+          </div>
+        )}
+
+
+        {/* ==========================================
+            LOADING
+        ========================================== */}
+
+        {loading && (
+
+          <div className="loading">
+
+            <div className="spinner"></div>
+
+            <p>
+              Analyzing leaf image...
+            </p>
+
+          </div>
+        )}
+
+
+        {/* ==========================================
+            RESULT
+        ========================================== */}
+
+        {result && !loading && (
+
+          <div className="result">
+
+            <h2>
+              Prediction Result
+            </h2>
+
+            <div className="result-class">
+
+              {result.class}
+
+            </div>
+
+
+            <div className="confidence-section">
+
+              <div className="confidence-header">
+
+                <span>
+                  Confidence
+                </span>
+
+                <span>
+                  {(result.confidence * 100).toFixed(2)}%
+                </span>
+
+              </div>
+
+
+              <div className="confidence-bar">
+
+                <div
+                  className="confidence-fill"
+                  style={{
+                    width: `${
+                      result.confidence * 100
+                    }%`
+                  }}
+                />
+
+              </div>
+
+            </div>
+
+          </div>
+        )}
+
       </div>
 
-      {/* LOADING */}
-      {loading && <div className="spinner"></div>}
-
-      {/* RESULT */}
-      {result && (
-        <div className="result">
-          <h3>{result.class}</h3>
-          <div className="bar">
-            <div
-              className="fill"
-              style={{
-                width: `${result.confidence * 100}%`,
-                backgroundColor: getBarColor(result.confidence),
-              }}
-            ></div>
-          </div>
-          <p className="confidence-text">
-            {(result.confidence * 100).toFixed(2)}% confidence
-          </p>
-        </div>
-      )}
-
-      <canvas ref={canvasRef} style={{ display: "none" }} />
     </div>
   );
 }
+
 
 export default App;

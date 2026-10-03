@@ -1,1 +1,41 @@
-PLANT_DISEASES
+# Python virtual environment
+
+.venv/
+
+# Python cache
+
+**pycache**/
+*.py[cod]
+*$py.class
+
+# Python build / distribution
+
+build/
+dist/
+*.egg-info/
+
+# Environment variables / secrets
+
+.env
+.env.*
+
+# Node.js dependencies
+
+node_modules/
+
+# React build output
+
+build/
+
+# Dataset
+
+PLANT_DISEASES/
+
+# Temporary dataset/testing files
+
+dataset_samples.jpg
+
+# OS-generated files
+
+.DS_Store
+Thumbs.db

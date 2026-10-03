@@ -79,6 +79,7 @@ button:hover {
 
 button:disabled {
   background: #a5d6a7;
+  cursor: not-allowed;
 }
 
 .spinner {
@@ -154,11 +155,16 @@ button:disabled {
 .camera video {
   width: 100%;
   border-radius: 14px;
+  display: block;
 }
 
 .camera button {
   margin-top: 10px;
   width: 100%;
+}
+
+.camera .clear-btn {
+  margin-top: 10px;
 }
 
 .camera-btn {
@@ -168,4 +174,17 @@ button:disabled {
 
 .camera-btn:hover {
   background: #2980b9;
+}
+
+/* Mobile responsiveness */
+
+@media (max-width: 480px) {
+  .container {
+    margin: 20px 12px;
+    padding: 20px;
+  }
+
+  h1 {
+    font-size: 1.35rem;
+  }
 }
